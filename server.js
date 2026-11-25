@@ -69,7 +69,7 @@ function researchState() {
 }
 async function fetchJson(url, opts = {}) {
   const r = await fetch(url, { ...opts, headers: { 'User-Agent': UA, ...(opts.headers || {}) } });
-  if (!r.ok) throw new Error(`HTTP ${r.status} from ${new URL(url).host}`);
+  if (!r.ok) {   let detail = '';   try {     const t = await r.text();     try { const j = JSON.parse(t); detail = (j.error && j.error.message) || ''; } catch (e) { detail = t; }   } catch (e) {}   detail = String(detail).replace(/\s+/g, ' ').slice(0, 220);   throw new Error(`HTTP ${r.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`); }
   return r.json();
 }
 function projectsNear(lat, lng, miles = NEARBY_MILES) {
