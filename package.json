@@ -1,0 +1,1 @@
+{"description":"Public research-brain service for the What's Being Built app","engines":{"node":">=18"},"main":"server.js","name":"whats-being-built-server","private":true,"scripts":{"geocode":"node geocode-seed.js","start":"node server.js"},"version":"1.0.0"}
