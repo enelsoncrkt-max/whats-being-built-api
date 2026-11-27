@@ -19,6 +19,14 @@
  * projects and passed through to the geocoding / search / LLM layers.
  * The US Census geocoder is used only for US lookups; Nominatim
  * (OpenStreetMap, global) is the fallback everywhere.
+ *
+ * Persistence: the host's local disk is ephemeral, so when GITHUB_TOKEN
+ * is set the service treats the GitHub repo's projects.json as the
+ * durable store — it merges that file in at boot and pushes the full
+ * project list back (debounced) whenever research saves new projects.
+ * Repo, branch and path default to the public whats-being-built-api
+ * repo and can be overridden with GITHUB_REPO / GITHUB_BRANCH /
+ * GITHUB_DATA_PATH. Without a token the service runs local-only.
  */
 const http = require('http');
 const fs = require('fs');
@@ -40,6 +48,10 @@ const LLM_MODEL = process.env.LLM_MODEL || '';
 function llmKey() {
   return LLM_PROVIDER === 'gemini' ? (GEMINI_API_KEY || LLM_API_KEY) : LLM_API_KEY;
 }
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO = process.env.GITHUB_REPO || 'enelsoncrkt-max/whats-being-built-api';
+const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
+const GITHUB_DATA_PATH = process.env.GITHUB_DATA_PATH || 'projects.json';
 const UA = 'WhatsBeingBuilt/1.0 (+https://whatsbeingbuiltapp.com)';
 const NEARBY_MILES = 25;
 
@@ -51,6 +63,78 @@ if (!Array.isArray(db.projects)) db.projects = [];
 function save() {
   db.updatedAt = new Date().toISOString();
   fs.writeFileSync(DATA_FILE, JSON.stringify(db, null, 1));
+}
+
+// ---------------- durable store: GitHub repo file ----------------
+// The host's disk is wiped on every recycle, so the repo copy of
+// projects.json is the source of truth. hydrateFromGithub() merges it
+// in at boot; pushToGithub() writes the full list back after research
+// saves something new. Both are best-effort: any failure is logged and
+// the service keeps running from its local copy.
+function githubHeaders() {
+  const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': UA };
+  if (GITHUB_TOKEN) h.Authorization = `Bearer ${GITHUB_TOKEN}`;
+  return h;
+}
+function githubContentsUrl() {
+  return `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_DATA_PATH}`;
+}
+async function hydrateFromGithub() {
+  try {
+    const j = await fetchJson(`${githubContentsUrl()}?ref=${GITHUB_BRANCH}`, { headers: githubHeaders() });
+    const remote = JSON.parse(Buffer.from(String(j.content || '').replace(/\s/g, ''), 'base64').toString('utf8'));
+    const rp = Array.isArray(remote.projects) ? remote.projects : [];
+    if (!rp.length) return;
+    const byKey = new Map(db.projects.map(p => [projectKey(p), p]));
+    let added = 0;
+    for (const p of rp) {
+      const k = projectKey(p);
+      if (!byKey.has(k)) { db.projects.push(p); byKey.set(k, p); added++; }
+    }
+    if (added) {
+      save();
+      console.log(`[persist] hydrated ${added} project(s) from GitHub (total ${db.projects.length})`);
+    } else {
+      console.log(`[persist] GitHub copy checked: ${rp.length} project(s), nothing new (local ${db.projects.length})`);
+    }
+  } catch (e) {
+    console.warn('[persist] hydrate from GitHub failed:', String(e.message || e).slice(0, 160));
+  }
+}
+let ghPushTimer = null, ghPushRunning = false, ghPushQueued = false;
+function scheduleGithubPush() {
+  if (!GITHUB_TOKEN) return;
+  if (ghPushRunning) { ghPushQueued = true; return; }
+  if (ghPushTimer) return;
+  ghPushTimer = setTimeout(() => { ghPushTimer = null; pushToGithub().catch(() => {}); }, 3000);
+}
+async function pushToGithub() {
+  if (!GITHUB_TOKEN || ghPushRunning) return;
+  ghPushRunning = true;
+  try {
+    const content = Buffer.from(JSON.stringify(db, null, 1), 'utf8').toString('base64');
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const cur = await fetchJson(`${githubContentsUrl()}?ref=${GITHUB_BRANCH}`, { headers: githubHeaders() }).catch(() => null);
+      const body = { message: `Update projects.json (${db.projects.length} projects)`, content, branch: GITHUB_BRANCH };
+      if (cur && cur.sha) body.sha = cur.sha;
+      try {
+        await fetchJson(githubContentsUrl(), {
+          method: 'PUT',
+          headers: { ...githubHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        console.log(`[persist] pushed ${db.projects.length} projects to GitHub`);
+        return;
+      } catch (e) {
+        if (attempt === 1) throw e; // one retry with a fresh sha, then give up
+      }
+    }
+  } catch (e) {
+    console.warn('[persist] GitHub push failed:', String(e.message || e).slice(0, 160));
+  } finally {
+    ghPushRunning = false;
+    if (ghPushQueued) { ghPushQueued = false; scheduleGithubPush(); }
+  }
 }
 
 // ---------------- helpers ----------------
@@ -69,7 +153,15 @@ function researchState() {
 }
 async function fetchJson(url, opts = {}) {
   const r = await fetch(url, { ...opts, headers: { 'User-Agent': UA, ...(opts.headers || {}) } });
-  if (!r.ok) {   let detail = '';   try {     const t = await r.text();     try { const j = JSON.parse(t); detail = (j.error && j.error.message) || ''; } catch (e) { detail = t; }   } catch (e) {}   detail = String(detail).replace(/\s+/g, ' ').slice(0, 220);   throw new Error(`HTTP ${r.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`); }
+  if (!r.ok) {
+    let detail = '';
+    try {
+      const t = await r.text();
+      try { const j = JSON.parse(t); detail = (j.error && j.error.message) || ''; } catch (e) { detail = t; }
+    } catch (e) {}
+    detail = String(detail).replace(/\s+/g, ' ').slice(0, 220);
+    throw new Error(`HTTP ${r.status} from ${new URL(url).host}${detail ? ': ' + detail : ''}`);
+  }
   return r.json();
 }
 function projectsNear(lat, lng, miles = NEARBY_MILES) {
@@ -215,7 +307,7 @@ async function runResearch({ city, state, lat, lng, lang, country }) {
     if (g) { p.lat = g.lat; p.lng = g.lng; p.geocodePrecision = g.precision; p.geocodeSource = g.source; }
     db.projects.push(p); known.add(projectKey(p)); fresh.push(p);
   }
-  if (fresh.length) save();
+  if (fresh.length) { save(); scheduleGithubPush(); }
   return fresh;
 }
 
@@ -285,7 +377,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (req.method === 'OPTIONS') return send(res, 204, {});
     if (req.method === 'GET' && url.pathname === '/health') {
-      return send(res, 200, { ok: true, service: 'whats-being-built', projects: db.projects.length, research: researchState() });
+      return send(res, 200, { ok: true, service: 'whats-being-built', projects: db.projects.length, research: researchState(), persist: GITHUB_TOKEN ? 'github' : 'local-only' });
     }
     if (req.method === 'GET' && url.pathname === '/') {
       return send(res, 200, { service: "What's Being Built — research brain", endpoints: ['GET /health', 'GET /api/projects?city=&state=&q=&lang=&country=', 'POST /api/identify {query, lang?, country?}', 'POST /api/research {city, state} or {lat, lng} (+ lang?, country?)'] });
@@ -316,4 +408,5 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+hydrateFromGithub();
 server.listen(PORT, () => console.log(`whats-being-built server listening on :${PORT} (${db.projects.length} projects cached, research ${researchState().status})`));
