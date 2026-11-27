@@ -1658,7 +1658,49 @@
    "source2Url": "",
    "lang": "en",
    "country": "US"
+  },
+  {
+   "name": "1113-1125 Dundas Street West",
+   "category": "residential",
+   "status": "Under construction",
+   "what": "A state-of-the-art housing development utilizing mass timber construction and geothermal energy to create 74 rent-controlled homes.",
+   "locationLabel": "West End",
+   "address": "1113-1125 Dundas Street West",
+   "city": "Toronto",
+   "state": "Ontario",
+   "lat": null,
+   "lng": null,
+   "costSize": "74 units",
+   "developer": "",
+   "timeline": "",
+   "source1Label": "CBC News",
+   "source1Url": "https://www.cbc.ca/news/canada/toronto/toronto-housing-project-seventy-four-units-dundas-street-west-9.7318414",
+   "source2Label": "",
+   "source2Url": "",
+   "lang": "en",
+   "country": "US"
+  },
+  {
+   "name": "KingSett Capital Financial District Tower",
+   "category": "residential",
+   "status": "Planned",
+   "what": "A proposed 65-storey residential skyscraper designed by AS + GG Architecture containing 649 units.",
+   "locationLabel": "Financial District",
+   "address": "",
+   "city": "Toronto",
+   "state": "Ontario",
+   "lat": null,
+   "lng": null,
+   "costSize": "65 storeys, 649 residential units",
+   "developer": "KingSett Capital",
+   "timeline": "",
+   "source1Label": "Urbanize Toronto",
+   "source1Url": "https://toronto.urbanize.city",
+   "source2Label": "",
+   "source2Url": "",
+   "lang": "en",
+   "country": "US"
   }
  ],
- "updatedAt": "2026-11-27T17:43:22.838Z"
+ "updatedAt": "2026-11-27T17:45:18.212Z"
 }
