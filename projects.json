@@ -1637,7 +1637,28 @@
    "source2Url": "",
    "lang": "en",
    "country": "US"
+  },
+  {
+   "name": "49 Ontario Street",
+   "category": "residential",
+   "status": "Planned",
+   "what": "Construction of two rental towers (East Tower with 601 units and West Tower with 625 units) delivering over 1,200 rental homes, including 381 affordable units.",
+   "locationLabel": "Downtown Toronto / Corktown",
+   "address": "49 Ontario Street",
+   "city": "Toronto",
+   "state": "Ontario",
+   "lat": null,
+   "lng": null,
+   "costSize": "1,226 units",
+   "developer": "",
+   "timeline": "",
+   "source1Label": "Backgrounder: Canada and Toronto announce new partnership to build thousands of new homes - Canada.ca",
+   "source1Url": "https://www.canada.ca/en/housing-infrastructure-communities/news/2026/08/canada-and-toronto-announce-new-partnership-to-build-thousands-of-new-homes.html",
+   "source2Label": "",
+   "source2Url": "",
+   "lang": "en",
+   "country": "US"
   }
  ],
- "updatedAt": "2026-11-27T17:43:03.527Z"
+ "updatedAt": "2026-11-27T17:43:22.838Z"
 }
