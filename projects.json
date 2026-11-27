@@ -1425,7 +1425,51 @@
    "country": "US",
    "geocodePrecision": "place",
    "geocodeSource": "nominatim"
+  },
+  {
+   "name": "F Street Augusta 1 Industrial Development",
+   "category": "Industrial",
+   "status": "Planned",
+   "what": "Construction of a new Class A industrial warehouse and distribution facility aimed at fulfilling regional logistics needs.",
+   "locationLabel": "",
+   "address": "",
+   "city": "St. Augusta",
+   "state": "MN",
+   "lat": 45.4785762,
+   "lng": -94.1541547,
+   "costSize": "",
+   "developer": "F Street",
+   "timeline": "",
+   "source1Label": "F Street",
+   "source1Url": "https://fstreet.com/2023/04/05/f-street-augusta-1-llc-closes-after-fully-funding",
+   "source2Label": "",
+   "source2Url": "",
+   "lang": "en",
+   "country": "US",
+   "geocodePrecision": "place",
+   "geocodeSource": "nominatim"
+  },
+  {
+   "name": "Gabardine Road Improvements",
+   "category": "Infrastructure",
+   "status": "Planned",
+   "what": "A planned road construction and improvement project along Gabardine Road to support local infrastructure and residential growth.",
+   "locationLabel": "Gabardine Rd",
+   "address": "Gabardine Rd",
+   "city": "St. Augusta",
+   "state": "MN",
+   "lat": null,
+   "lng": null,
+   "costSize": "$1 million",
+   "developer": "City of St. Augusta",
+   "timeline": "Starting in 2026",
+   "source1Label": "WJON News",
+   "source1Url": "https://wjon.com/st-augusta-community-growth",
+   "source2Label": "",
+   "source2Url": "",
+   "lang": "en",
+   "country": "US"
   }
  ],
- "updatedAt": "2026-11-27T04:48:33.041Z"
+ "updatedAt": "2026-11-27T17:40:52.000Z"
 }
